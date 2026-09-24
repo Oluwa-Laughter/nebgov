@@ -15,7 +15,7 @@ import {
   VotingRewardsErrorCode,
   parseVotingRewardsError,
 } from "./errors";
-import { withRetry, isNetworkError, hexToBytes32 } from "./utils";
+import { createRetry, isNetworkError, hexToBytes32, type RetryFunction } from "./utils";
 
 export type VotingRewardsConfig = GovernorConfig;
 
@@ -72,6 +72,7 @@ export class VotingRewardsClient {
   private readonly server: SorobanRpc.Server;
   private readonly contract: Contract;
   private readonly networkPassphrase: string;
+  private readonly retry: RetryFunction;
 
   constructor(config: VotingRewardsConfig) {
     if (!config.votingRewardsAddress) {
@@ -85,14 +86,7 @@ export class VotingRewardsClient {
     this.server = new SorobanRpc.Server(rpcUrl, { allowHttp: false });
     this.contract = new Contract(config.votingRewardsAddress);
     this.networkPassphrase = NETWORK_PASSPHRASES[config.network];
-  }
-
-  private async retry<T>(fn: () => Promise<T>): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts,
-      baseDelayMs: this.config.baseDelayMs,
-      retryOn: isNetworkError,
-    });
+    this.retry = createRetry(config, { retryOn: isNetworkError });
   }
 
   private readAccount(): string {
@@ -205,8 +199,8 @@ export class VotingRewardsClient {
     };
   }
 
-  /** Read one epoch's on-chain record. */
-  async getEpoch(epochId: bigint | number): Promise<VotingRewardsEpoch> {
+  /** Read one epoch's on-chain record, or `null` when it does not exist. */
+  async getEpoch(epochId: bigint | number): Promise<VotingRewardsEpoch | null> {
     const raw = await this.simulate(
       "get_epoch",
       nativeToScVal(BigInt(epochId), { type: "u64" }),
@@ -217,7 +211,8 @@ export class VotingRewardsClient {
         "No return value from get_epoch",
       );
     }
-    return this.parseEpoch(scValToNative(raw) as Record<string, unknown>);
+    const native = scValToNative(raw) as Record<string, unknown> | null | undefined;
+    return native == null ? null : this.parseEpoch(native);
   }
 
   /** The epoch currently accepting votes. */

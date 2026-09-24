@@ -15,7 +15,7 @@ import {
   CoSponsorshipErrorCode,
   parseCoSponsorshipError,
 } from "./errors";
-import { withRetry, isNetworkError } from "./utils";
+import { createRetry, isNetworkError, type RetryFunction } from "./utils";
 
 export type CoSponsorshipConfig = GovernorConfig;
 
@@ -64,6 +64,7 @@ export class CoSponsorshipClient {
   private readonly server: SorobanRpc.Server;
   private readonly contract: Contract;
   private readonly networkPassphrase: string;
+  private readonly retry: RetryFunction;
 
   constructor(config: CoSponsorshipConfig) {
     if (!config.coSponsorshipAddress) {
@@ -77,14 +78,7 @@ export class CoSponsorshipClient {
     this.server = new SorobanRpc.Server(rpcUrl, { allowHttp: false });
     this.contract = new Contract(config.coSponsorshipAddress);
     this.networkPassphrase = NETWORK_PASSPHRASES[config.network];
-  }
-
-  private async retry<T>(fn: () => Promise<T>): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts,
-      baseDelayMs: this.config.baseDelayMs,
-      retryOn: isNetworkError,
-    });
+    this.retry = createRetry(config, { retryOn: isNetworkError });
   }
 
   private readAccount(): string {
@@ -647,4 +641,3 @@ function mapDraftFromIndexer(raw: any): ProposalDraft {
     cancelled: Boolean(raw.cancelled),
   };
 }
-

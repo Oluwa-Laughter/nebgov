@@ -9,7 +9,7 @@ import {
 } from "@stellar/stellar-sdk";
 import { LiquidityConfig, Network, Pool } from "./types";
 import { TreasuryError, TreasuryErrorCode } from "./errors";
-import { withRetry, isNetworkError } from "./utils";
+import { createRetry, isNetworkError, type RetryFunction } from "./utils";
 
 const RPC_URLS: Record<Network, string> = {
   mainnet: "https://soroban-rpc.mainnet.stellar.gateway.fm",
@@ -57,6 +57,7 @@ export class LiquidityClient {
   private readonly server: SorobanRpc.Server;
   private readonly contract: Contract;
   private readonly networkPassphrase: string;
+  private readonly retry: RetryFunction;
 
   constructor(config: LiquidityConfig) {
     this.config = config;
@@ -64,6 +65,7 @@ export class LiquidityClient {
     this.server = new SorobanRpc.Server(rpcUrl, { allowHttp: false });
     this.contract = new Contract(config.liquidityAddress);
     this.networkPassphrase = NETWORK_PASSPHRASES[config.network];
+    this.retry = createRetry(config, { retryOn: isNetworkError });
   }
 
   private readAccount(fallback?: string): string {
@@ -75,14 +77,6 @@ export class LiquidityClient {
       );
     }
     return account;
-  }
-
-  private async retry<T>(fn: () => Promise<T>): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts ?? 3,
-      baseDelayMs: this.config.baseDelayMs ?? 1000,
-      retryOn: isNetworkError,
-    });
   }
 
   /**

@@ -2,6 +2,8 @@
  * NebGov SDK — core types
  */
 
+import type { RetryOptions } from "../utils";
+
 /** Stellar network identifier. */
 export type Network = "mainnet" | "testnet" | "futurenet";
 
@@ -302,6 +304,8 @@ export interface GovernorConfig {
   maxAttempts?: number;
   /** Base delay in milliseconds for exponential backoff (default: 1000) */
   baseDelayMs?: number;
+  /** Retry policy for all operations made by this client. */
+  retry?: RetryOptions;
   /** Token decimals for vote display (optional — fetched from contract if not provided) */
   decimals?: number;
   /** Admin secret for admin-only backend endpoints (e.g. governance tuning config update) */
@@ -468,6 +472,8 @@ export interface FactoryConfig {
   maxAttempts?: number;
   /** Base delay in milliseconds for exponential backoff (default: 1000) */
   baseDelayMs?: number;
+  /** Retry policy for all operations made by this client. */
+  retry?: RetryOptions;
 }
 
 export interface GuardianActivityEntry {
@@ -696,6 +702,8 @@ export interface TreasuryConfig {
   maxAttempts?: number;
   /** Base delay between retries in milliseconds (default: 1000) */
   baseDelayMs?: number;
+  /** Retry policy for all operations made by this client. */
+  retry?: RetryOptions;
 }
 
 /** A single recipient in a batch transfer operation. */
@@ -800,6 +808,8 @@ export interface LiquidityConfig {
   maxAttempts?: number;
   /** Base delay between retries in milliseconds (default: 1000) */
   baseDelayMs?: number;
+  /** Retry policy for all operations made by this client. */
+  retry?: RetryOptions;
 }
 
 /** On-chain state of a single two-asset liquidity pool. */

@@ -27,7 +27,7 @@ import {
 } from "../types";
 
 import { GovernorError, GovernorErrorCode, parseGovernorError } from "../errors";
-import { hexToBytes32, withRetry } from "../utils";
+import { createRetry, hexToBytes32, type RetryFunction } from "../utils";
 
 // Import standalone functions for method delegation
 import {
@@ -148,6 +148,7 @@ export class GovernorClient {
   readonly server: SorobanRpc.Server;
   readonly contract: Contract;
   readonly networkPassphrase: string;
+  readonly retry: RetryFunction;
 
   constructor(config: GovernorConfig) {
     this.config = config;
@@ -155,16 +156,7 @@ export class GovernorClient {
     this.server = new SorobanRpc.Server(rpcUrl, { allowHttp: false });
     this.contract = new Contract(config.governorAddress);
     this.networkPassphrase = NETWORK_PASSPHRASES[config.network];
-  }
-
-  async retry<T>(
-    fn: () => Promise<T>,
-    retryOn?: (e: unknown) => boolean,
-  ): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts ?? 3,
-      baseDelayMs: this.config.baseDelayMs ?? 1000,
-      retryOn,
+    this.retry = createRetry(config, {
       onRetry: (attempt, error) => {
         console.debug(`[GovernorClient] Retry attempt ${attempt} due to error:`, error);
       },

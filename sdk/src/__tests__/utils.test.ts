@@ -1,4 +1,4 @@
-import { computeQuadraticWeight, withRetry } from "../utils";
+import { computeQuadraticWeight, createRetry, withRetry } from "../utils";
 
 describe("computeQuadraticWeight", () => {
   it("returns 0 for balance of 0", () => {
@@ -131,5 +131,27 @@ describe("withRetry — jitter and backoff", () => {
       withRetry(fn, { baseDelayMs: 0, maxAttempts: 3, retryOn: () => false })
     ).rejects.toThrow("no retry");
     expect(fn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("createRetry", () => {
+  it("uses the retry policy from client configuration", async () => {
+    const retry = createRetry({ retry: { maxAttempts: 1, baseDelayMs: 0 } });
+    const fn = jest.fn().mockRejectedValue(new Error("fail fast"));
+
+    await expect(retry(fn)).rejects.toThrow("fail fast");
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps legacy fields compatible but gives the retry object precedence", async () => {
+    const retry = createRetry({
+      maxAttempts: 5,
+      baseDelayMs: 1000,
+      retry: { maxAttempts: 2, baseDelayMs: 0 },
+    });
+    const fn = jest.fn().mockRejectedValue(new Error("still failing"));
+
+    await expect(retry(fn)).rejects.toThrow("still failing");
+    expect(fn).toHaveBeenCalledTimes(2);
   });
 });

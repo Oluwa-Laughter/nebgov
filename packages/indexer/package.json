@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "test": "jest",
+    "check:migrations": "node scripts/check-migration-prefixes.mjs",
     "migrate": "tsx src/migrate.ts",
     "migrate:down": "tsx src/migrate.ts down"
   },

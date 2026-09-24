@@ -1,5 +1,5 @@
 import { GovernorError, GovernorErrorCode } from "./errors";
-import { withRetry, isNetworkError } from "./utils";
+import { createRetry, isNetworkError, type RetryFunction } from "./utils";
 import type {
   GovernorConfig,
   TuningConfig,
@@ -52,17 +52,11 @@ function mapConfig(raw: any): TuningConfig {
  */
 export class GovernanceTuningClient {
   private readonly config: GovernorConfig;
+  private readonly retry: RetryFunction;
 
   constructor(config: GovernorConfig) {
     this.config = config;
-  }
-
-  private async retry<T>(fn: () => Promise<T>): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts,
-      baseDelayMs: this.config.baseDelayMs,
-      retryOn: isNetworkError,
-    });
+    this.retry = createRetry(config, { retryOn: isNetworkError });
   }
 
   private async backendRequest<T>(path: string, init?: RequestInit): Promise<T> {

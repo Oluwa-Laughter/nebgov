@@ -25,7 +25,7 @@ import {
   PaginationOptions,
 } from "./types";
 import { TreasuryError, TreasuryErrorCode, parseTreasuryError } from "./errors";
-import { withRetry, isNetworkError } from "./utils";
+import { createRetry, isNetworkError, type RetryFunction } from "./utils";
 
 const RPC_URLS: Record<Network, string> = {
   mainnet: "https://soroban-rpc.mainnet.stellar.gateway.fm",
@@ -79,6 +79,7 @@ export class TreasuryClient {
   private readonly server: SorobanRpc.Server;
   private readonly contract: Contract;
   private readonly networkPassphrase: string;
+  private readonly retry: RetryFunction;
 
   constructor(config: TreasuryConfig) {
     this.config = config;
@@ -86,6 +87,7 @@ export class TreasuryClient {
     this.server = new SorobanRpc.Server(rpcUrl, { allowHttp: false });
     this.contract = new Contract(config.treasuryAddress);
     this.networkPassphrase = NETWORK_PASSPHRASES[config.network];
+    this.retry = createRetry(config, { retryOn: isNetworkError });
   }
 
   private readAccount(fallback?: string): string {
@@ -97,17 +99,6 @@ export class TreasuryClient {
       );
     }
     return account;
-  }
-
-  private async retry<T>(
-    fn: () => Promise<T>,
-    filter?: (e: unknown) => boolean,
-  ): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts ?? 3,
-      baseDelayMs: this.config.baseDelayMs ?? 1000,
-      retryOn: filter ?? isNetworkError,
-    });
   }
 
   private isRetryableSubmissionError(e: unknown): boolean {

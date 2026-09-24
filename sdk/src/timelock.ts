@@ -15,7 +15,7 @@ import {
   TimelockErrorCode,
   parseTimelockError,
 } from "./errors";
-import { withRetry, isNetworkError } from "./utils";
+import { createRetry, isNetworkError, type RetryFunction } from "./utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -104,6 +104,7 @@ export class TimelockClient {
   private readonly server: SorobanRpc.Server;
   private readonly contract: Contract;
   private readonly networkPassphrase: string;
+  private readonly retry: RetryFunction;
 
   constructor(config: GovernorConfig) {
     this.config = config;
@@ -111,17 +112,7 @@ export class TimelockClient {
     this.server = new SorobanRpc.Server(rpcUrl, { allowHttp: false });
     this.contract = new Contract(config.timelockAddress);
     this.networkPassphrase = NETWORK_PASSPHRASES[config.network];
-  }
-
-  private async retry<T>(
-    fn: () => Promise<T>,
-    filter?: (e: unknown) => boolean,
-  ): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts,
-      baseDelayMs: this.config.baseDelayMs,
-      retryOn: filter ?? isNetworkError,
-    });
+    this.retry = createRetry(config, { retryOn: isNetworkError });
   }
 
   /**

@@ -15,7 +15,7 @@ import {
   ProposalBondsErrorCode,
   parseProposalBondsError,
 } from "./errors";
-import { withRetry, isNetworkError, hexToBytes32 } from "./utils";
+import { createRetry, isNetworkError, hexToBytes32, type RetryFunction } from "./utils";
 
 export type ProposalBondsConfig = GovernorConfig;
 
@@ -75,6 +75,7 @@ export class ProposalBondsClient {
   private readonly server: SorobanRpc.Server;
   private readonly contract: Contract;
   private readonly networkPassphrase: string;
+  private readonly retry: RetryFunction;
 
   constructor(config: ProposalBondsConfig) {
     if (!config.proposalBondsAddress) {
@@ -88,14 +89,7 @@ export class ProposalBondsClient {
     this.server = new SorobanRpc.Server(rpcUrl, { allowHttp: false });
     this.contract = new Contract(config.proposalBondsAddress);
     this.networkPassphrase = NETWORK_PASSPHRASES[config.network];
-  }
-
-  private async retry<T>(fn: () => Promise<T>): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts,
-      baseDelayMs: this.config.baseDelayMs,
-      retryOn: isNetworkError,
-    });
+    this.retry = createRetry(config, { retryOn: isNetworkError });
   }
 
   private readAccount(): string {

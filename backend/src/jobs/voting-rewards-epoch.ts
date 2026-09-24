@@ -120,6 +120,13 @@ export class VotingRewardsEpochService {
     let epochId = highestPublished === null ? 0n : highestPublished + 1n;
     for (; epochId <= currentEpochId; epochId++) {
       const onchain = await client.getEpoch(epochId);
+      if (!onchain) {
+        logger.warn(
+          { epochId: epochId.toString() },
+          "Voting rewards epoch does not exist on-chain",
+        );
+        break;
+      }
 
       // The epoch's end ledger passing on-chain is not enough: the indexer
       // has to have ingested that far, or the tail of the epoch's votes
@@ -238,6 +245,7 @@ export class VotingRewardsEpochService {
     if (!relayer) return;
 
     const current = await client.getEpoch(currentEpochId);
+    if (!current) return;
     if (indexedHeight < current.endLedger) return;
 
     try {

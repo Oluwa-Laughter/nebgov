@@ -8,7 +8,7 @@ import {
   scValToNative,
 } from "@stellar/stellar-sdk";
 import { GovernorConfig } from "./types";
-import { withRetry } from "./utils";
+import { createRetry, type RetryFunction } from "./utils";
 import { parseVoteEscrowError } from "./errors";
 
 const RPC_URLS: Record<string, string> = {
@@ -43,6 +43,7 @@ export class VoteEscrowClient {
   private readonly contract: Contract;
   private readonly networkPassphrase: string;
   private readonly config: GovernorConfig;
+  private readonly retry: RetryFunction;
 
   constructor(config: GovernorConfig) {
     this.config = config;
@@ -50,17 +51,7 @@ export class VoteEscrowClient {
     this.server = new SorobanRpc.Server(rpcUrl, { allowHttp: false });
     this.contract = new Contract(config.voteEscrowAddress || "");
     this.networkPassphrase = NETWORK_PASSPHRASES[config.network];
-  }
-
-  private async retry<T>(
-    fn: () => Promise<T>,
-    retryOn?: (e: unknown) => boolean
-  ): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: 5,
-      baseDelayMs: 1000,
-      retryOn,
-    });
+    this.retry = createRetry(config, { maxAttempts: 5, baseDelayMs: 1000 });
   }
 
   private readAccount(fallback?: string): string {

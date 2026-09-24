@@ -16,7 +16,7 @@ import {
   SignalingPollResults,
 } from "./types";
 import { SignalingError, SignalingErrorCode, parseSignalingError } from "./errors";
-import { withRetry, isNetworkError } from "./utils";
+import { createRetry, isNetworkError, type RetryFunction } from "./utils";
 
 const RPC_URLS: Record<Network, string> = {
   mainnet: "https://soroban-rpc.mainnet.stellar.gateway.fm",
@@ -175,20 +175,14 @@ export class SignalingClient {
   private readonly config: GovernorConfig;
   private readonly server: SorobanRpc.Server;
   private readonly networkPassphrase: string;
+  private readonly retry: RetryFunction;
 
   constructor(config: GovernorConfig) {
     this.config = config;
     const rpcUrl = config.rpcUrl ?? RPC_URLS[config.network];
     this.server = new SorobanRpc.Server(rpcUrl, { allowHttp: false });
     this.networkPassphrase = NETWORK_PASSPHRASES[config.network];
-  }
-
-  private async retry<T>(fn: () => Promise<T>): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts,
-      baseDelayMs: this.config.baseDelayMs,
-      retryOn: isNetworkError,
-    });
+    this.retry = createRetry(config, { retryOn: isNetworkError });
   }
 
   private async backendRequest<T>(path: string, init?: RequestInit): Promise<T> {

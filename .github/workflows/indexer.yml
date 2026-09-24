@@ -52,6 +52,9 @@ jobs:
       - name: Type-check indexer
         run: pnpm --filter @nebgov/indexer run build
 
+      - name: Validate migration numbering
+        run: pnpm --filter @nebgov/indexer run check:migrations
+
       - name: Run indexer database migrations
         run: pnpm --filter @nebgov/indexer run migrate
 

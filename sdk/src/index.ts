@@ -71,6 +71,7 @@ export {
   extractContractErrorCode,
 } from "./errors";
 export type { SorobanRpcError } from "./errors";
+export type { RetryOptions, ClientRetryConfig, RetryFunction } from "./utils";
 export {
   subscribeToProposals,
   subscribeToVotes,

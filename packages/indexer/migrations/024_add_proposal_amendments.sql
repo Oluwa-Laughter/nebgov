@@ -1,5 +1,7 @@
 -- Up Migration
 
+-- Renumbered from 021_add_proposal_amendments.sql; see ../MIGRATIONS.md.
+
 -- Add current_amendment_version column to proposals table
 ALTER TABLE proposals
   ADD COLUMN current_amendment_version INTEGER DEFAULT 0;

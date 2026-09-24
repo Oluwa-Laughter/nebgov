@@ -2,6 +2,7 @@
   "entryPoints": ["src/index.ts"],
   "out": "docs",
   "plugin": ["typedoc-plugin-markdown"],
+  "skipErrorChecking": true,
   "treatWarningsAsErrors": true,
   "excludePrivate": true,
   "excludeProtected": true,

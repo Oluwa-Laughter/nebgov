@@ -22,7 +22,7 @@ import {
   TreasuryStrategiesErrorCode,
   parseTreasuryStrategiesError,
 } from "./errors";
-import { withRetry, isNetworkError } from "./utils";
+import { createRetry, isNetworkError, type RetryFunction } from "./utils";
 
 export type TreasuryStrategiesConfig = GovernorConfig;
 
@@ -129,6 +129,7 @@ export class TreasuryStrategiesClient {
   private readonly server: SorobanRpc.Server;
   private readonly contract: Contract;
   private readonly networkPassphrase: string;
+  private readonly retry: RetryFunction;
 
   constructor(config: TreasuryStrategiesConfig) {
     if (!config.treasuryStrategiesAddress) {
@@ -142,17 +143,10 @@ export class TreasuryStrategiesClient {
     this.server = new SorobanRpc.Server(rpcUrl, { allowHttp: false });
     this.contract = new Contract(config.treasuryStrategiesAddress);
     this.networkPassphrase = NETWORK_PASSPHRASES[config.network];
+    this.retry = createRetry(config, { retryOn: isNetworkError });
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
-
-  private async retry<T>(fn: () => Promise<T>): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts,
-      baseDelayMs: this.config.baseDelayMs,
-      retryOn: isNetworkError,
-    });
-  }
 
   private readAccount(): string {
     return this.config.simulationAccount ?? this.config.treasuryStrategiesAddress!;

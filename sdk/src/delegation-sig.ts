@@ -41,7 +41,12 @@ import {
 } from "@stellar/stellar-sdk";
 import { DelegationPermit, Network } from "./types";
 import { VotesError, VotesErrorCode, parseVotesError } from "./errors";
-import { withRetry, isNetworkError } from "./utils";
+import {
+  createRetry,
+  isNetworkError,
+  type RetryFunction,
+  type RetryOptions,
+} from "./utils";
 
 const RPC_URLS: Record<Network, string> = {
   mainnet: "https://soroban-rpc.mainnet.stellar.gateway.fm",
@@ -68,6 +73,7 @@ export interface DelegationSigConfig {
   simulationAccount?: string;
   maxAttempts?: number;
   baseDelayMs?: number;
+  retry?: RetryOptions;
 }
 
 export interface DelegationTxResult {
@@ -82,20 +88,14 @@ export class DelegationSigClient {
   private readonly server: SorobanRpc.Server;
   private readonly contract: Contract;
   private readonly networkPassphrase: string;
+  private readonly retry: RetryFunction;
 
   constructor(private readonly config: DelegationSigConfig) {
     const rpcUrl = config.rpcUrl ?? RPC_URLS[config.network];
     this.server = new SorobanRpc.Server(rpcUrl, { allowHttp: false });
     this.contract = new Contract(config.votesAddress);
     this.networkPassphrase = NETWORK_PASSPHRASES[config.network];
-  }
-
-  private async retry<T>(fn: () => Promise<T>): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts,
-      baseDelayMs: this.config.baseDelayMs,
-      retryOn: isNetworkError,
-    });
+    this.retry = createRetry(config, { retryOn: isNetworkError });
   }
 
   private readAccount(fallback?: string): string {

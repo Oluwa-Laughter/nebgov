@@ -271,8 +271,10 @@ impl VotingRewardsContract {
         events::emit_pool_funded(&env, &funder, amount);
     }
 
-    pub fn get_epoch(env: Env, epoch_id: u64) -> Epoch {
-        Self::must_get_epoch(&env, epoch_id)
+    pub fn get_epoch(env: Env, epoch_id: u64) -> Option<Epoch> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Epoch(epoch_id))
     }
 
     pub fn get_current_epoch_id(env: Env) -> u64 {

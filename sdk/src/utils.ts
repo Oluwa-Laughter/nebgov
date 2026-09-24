@@ -1,5 +1,34 @@
 import { nativeToScVal, scValToNative, xdr } from "@stellar/stellar-sdk";
 
+/** Options controlling exponential-backoff retries. */
+export interface RetryOptions {
+  /** Total attempts, including the initial call (default: 3). */
+  maxAttempts?: number;
+  /** Initial backoff delay in milliseconds (default: 1000). */
+  baseDelayMs?: number;
+  /** Maximum backoff delay before jitter (default: 30000). */
+  maxDelayMs?: number;
+  /** Return true only for errors that should be retried. */
+  retryOn?: (error: unknown) => boolean;
+  /** Called immediately before each retry is delayed. */
+  onRetry?: (attempt: number, error: unknown) => void;
+}
+
+/** Retry-related fields accepted by SDK client configurations. */
+export interface ClientRetryConfig {
+  /** Retry policy for this client. */
+  retry?: RetryOptions;
+  /** @deprecated Use `retry.maxAttempts`. */
+  maxAttempts?: number;
+  /** @deprecated Use `retry.baseDelayMs`. */
+  baseDelayMs?: number;
+}
+
+export type RetryFunction = <T>(
+  fn: () => Promise<T>,
+  retryOn?: (error: unknown) => boolean,
+) => Promise<T>;
+
 /**
  * Encode an array of native JavaScript values into XDR calldata bytes suitable
  * for use in governance proposals and contract invocations.
@@ -109,13 +138,7 @@ export function hexToBytes32(hex: string): Uint8Array {
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  opts?: {
-    maxAttempts?: number;
-    baseDelayMs?: number;
-    maxDelayMs?: number;
-    retryOn?: (e: unknown) => boolean;
-    onRetry?: (attempt: number, error: unknown) => void;
-  }
+  opts?: RetryOptions,
 ): Promise<T> {
   const maxAttempts = opts?.maxAttempts ?? 3;
   const baseDelayMs = opts?.baseDelayMs ?? 1000;
@@ -143,6 +166,33 @@ export async function withRetry<T>(
     }
   }
   throw lastError;
+}
+
+/**
+ * Build the retry function shared by SDK clients.
+ *
+ * The legacy top-level fields remain supported, while the `retry` object is
+ * the canonical configuration and takes precedence over them.
+ */
+export function createRetry(
+  config: ClientRetryConfig = {},
+  defaults: RetryOptions = {},
+): RetryFunction {
+  const options: RetryOptions = {
+    ...defaults,
+    maxAttempts: config.maxAttempts ?? defaults.maxAttempts,
+    baseDelayMs: config.baseDelayMs ?? defaults.baseDelayMs,
+    ...config.retry,
+  };
+
+  return <T>(
+    fn: () => Promise<T>,
+    retryOn?: (error: unknown) => boolean,
+  ): Promise<T> =>
+    withRetry(fn, {
+      ...options,
+      retryOn: retryOn ?? options.retryOn,
+    });
 }
 
 export function isNetworkError(e: unknown): boolean {

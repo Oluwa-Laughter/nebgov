@@ -132,7 +132,7 @@ fn published_two_voter_epoch(
     b_amount: i128,
 ) -> (u64, Vec<BytesN<32>>, Vec<BytesN<32>>) {
     let epoch_id = f.client.get_current_epoch_id();
-    let epoch = f.client.get_epoch(&epoch_id);
+    let epoch = f.client.get_epoch(&epoch_id).unwrap();
 
     let leaves = vec![
         env,
@@ -159,7 +159,7 @@ fn initialize_opens_epoch_zero() {
     let f = setup(&env);
 
     assert_eq!(f.client.get_current_epoch_id(), 0);
-    let epoch = f.client.get_epoch(&0);
+    let epoch = f.client.get_epoch(&0).unwrap();
     assert_eq!(epoch.id, 0);
     assert_eq!(epoch.end_ledger, epoch.start_ledger + EPOCH_DURATION);
     assert_eq!(epoch.merkle_root, None);
@@ -198,7 +198,7 @@ fn start_next_epoch_before_end_ledger_panics() {
     let env = Env::default();
     let f = setup(&env);
 
-    let epoch = f.client.get_epoch(&0);
+    let epoch = f.client.get_epoch(&0).unwrap();
     advance_to(&env, epoch.end_ledger - 1);
     f.client.start_next_epoch();
 }
@@ -208,14 +208,14 @@ fn start_next_epoch_is_permissionless_and_contiguous() {
     let env = Env::default();
     let f = setup(&env);
 
-    let first = f.client.get_epoch(&0);
+    let first = f.client.get_epoch(&0).unwrap();
     // Roll forward well past the boundary: the next epoch must still start
     // exactly where the previous one ended, so no ledger goes unrewardable.
     advance_to(&env, first.end_ledger + 500);
     f.client.start_next_epoch();
 
     assert_eq!(f.client.get_current_epoch_id(), 1);
-    let second = f.client.get_epoch(&1);
+    let second = f.client.get_epoch(&1).unwrap();
     assert_eq!(second.start_ledger, first.end_ledger);
     assert_eq!(second.end_ledger, first.end_ledger + EPOCH_DURATION);
 }
@@ -255,11 +255,11 @@ fn claim_succeeds_with_a_correct_proof() {
     f.client.claim(&alice, &epoch_id, &700, &alice_proof);
     assert_eq!(f.token_client.balance(&alice), 700);
     assert!(f.client.has_claimed(&epoch_id, &alice));
-    assert_eq!(f.client.get_epoch(&epoch_id).claimed_amount, 700);
+    assert_eq!(f.client.get_epoch(&epoch_id).unwrap().claimed_amount, 700);
 
     f.client.claim(&bob, &epoch_id, &300, &bob_proof);
     assert_eq!(f.token_client.balance(&bob), 300);
-    assert_eq!(f.client.get_epoch(&epoch_id).claimed_amount, 1_000);
+    assert_eq!(f.client.get_epoch(&epoch_id).unwrap().claimed_amount, 1_000);
 
     // Everything allocated has now been paid out, so the whole remaining
     // balance is available for the next epoch again.
@@ -326,7 +326,7 @@ fn publish_epoch_root_from_a_non_admin_panics() {
     let env = Env::default();
     let f = setup(&env);
 
-    let epoch = f.client.get_epoch(&0);
+    let epoch = f.client.get_epoch(&0).unwrap();
     f.token_admin_client.mint(&f.contract_id, &POOL_FUNDING);
     advance_to(&env, epoch.end_ledger);
 
@@ -341,7 +341,7 @@ fn publish_epoch_root_beyond_the_pool_balance_panics() {
     let env = Env::default();
     let f = setup(&env);
 
-    let epoch = f.client.get_epoch(&0);
+    let epoch = f.client.get_epoch(&0).unwrap();
     f.token_admin_client.mint(&f.contract_id, &1_000);
     advance_to(&env, epoch.end_ledger);
 
@@ -355,7 +355,7 @@ fn a_second_epoch_cannot_re_commit_an_unclaimed_allocation() {
     let env = Env::default();
     let f = setup(&env);
 
-    let epoch = f.client.get_epoch(&0);
+    let epoch = f.client.get_epoch(&0).unwrap();
     f.token_admin_client.mint(&f.contract_id, &1_000);
     advance_to(&env, epoch.end_ledger);
 
@@ -364,7 +364,7 @@ fn a_second_epoch_cannot_re_commit_an_unclaimed_allocation() {
     assert_eq!(f.client.get_available_pool(), 0);
 
     f.client.start_next_epoch();
-    let second = f.client.get_epoch(&1);
+    let second = f.client.get_epoch(&1).unwrap();
     advance_to(&env, second.end_ledger);
     // Nobody has claimed epoch 0 yet, so its 1_000 is still spoken for even
     // though the tokens are physically still here.
@@ -388,7 +388,7 @@ fn republishing_an_epoch_root_panics() {
     let env = Env::default();
     let f = setup(&env);
 
-    let epoch = f.client.get_epoch(&0);
+    let epoch = f.client.get_epoch(&0).unwrap();
     f.token_admin_client.mint(&f.contract_id, &POOL_FUNDING);
     advance_to(&env, epoch.end_ledger);
 
@@ -398,11 +398,10 @@ fn republishing_an_epoch_root_panics() {
 }
 
 #[test]
-#[should_panic(expected = "Error(Contract, #5)")]
-fn get_epoch_for_an_unknown_epoch_panics() {
+fn get_epoch_for_an_unknown_epoch_returns_none() {
     let env = Env::default();
     let f = setup(&env);
-    f.client.get_epoch(&99);
+    assert_eq!(f.client.get_epoch(&99), None);
 }
 
 #[test]
@@ -410,14 +409,14 @@ fn zero_participation_epoch_publishes_an_empty_allocation() {
     let env = Env::default();
     let f = setup(&env);
 
-    let epoch = f.client.get_epoch(&0);
+    let epoch = f.client.get_epoch(&0).unwrap();
     advance_to(&env, epoch.end_ledger);
     // No voters: the backend publishes a zero allocation rather than
     // skipping the epoch, so the on-chain epoch history stays contiguous.
     let root = BytesN::from_array(&env, &[0u8; 32]);
     f.client.publish_epoch_root(&f.admin, &0, &root, &0);
 
-    let published = f.client.get_epoch(&0);
+    let published = f.client.get_epoch(&0).unwrap();
     assert!(published.finalized);
     assert_eq!(published.total_reward_amount, 0);
 }
@@ -498,5 +497,4 @@ const GOLDEN_PROOFS: [&[&str]; 5] = [
         "6ea80d6c6732a9803a42f6946621bc2169894c95f12aaa15f78f6388611f14ac",
     ],
 ];
-
 

@@ -1,5 +1,7 @@
 -- Up Migration
 
+-- Renumbered from 012_add_vote_escrow.sql; see ../MIGRATIONS.md.
+
 CREATE TABLE IF NOT EXISTS vote_escrow_locks (
     id SERIAL PRIMARY KEY,
     owner_address VARCHAR(56) NOT NULL,

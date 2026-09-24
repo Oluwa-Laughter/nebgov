@@ -1,6 +1,6 @@
 import { AllTimeStats, GovernanceSnapshot, GovernorConfig, VoterHistory } from "./types";
 import { GovernorError, GovernorErrorCode } from "./errors";
-import { withRetry, isNetworkError } from "./utils";
+import { createRetry, isNetworkError, type RetryFunction } from "./utils";
 
 function mapGovernanceSnapshot(raw: any): GovernanceSnapshot {
   return {
@@ -57,17 +57,11 @@ function mapVoterHistory(raw: any): VoterHistory {
  */
 export class AnalyticsClient {
   private readonly config: GovernorConfig;
+  private readonly retry: RetryFunction;
 
   constructor(config: GovernorConfig) {
     this.config = config;
-  }
-
-  private async retry<T>(fn: () => Promise<T>): Promise<T> {
-    return withRetry(fn, {
-      maxAttempts: this.config.maxAttempts,
-      baseDelayMs: this.config.baseDelayMs,
-      retryOn: isNetworkError,
-    });
+    this.retry = createRetry(config, { retryOn: isNetworkError });
   }
 
   private async indexerRequest<T>(path: string): Promise<T> {

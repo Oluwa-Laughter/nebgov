@@ -138,6 +138,17 @@ describe("VotingRewardsClient", () => {
     });
   });
 
+  describe("getEpoch", () => {
+    it("returns null when the contract reports an unknown epoch", async () => {
+      const client = makeClient();
+      jest
+        .spyOn(client as unknown as { simulate: () => Promise<xdr.ScVal> }, "simulate")
+        .mockResolvedValue(xdr.ScVal.scvVoid());
+
+      await expect(client.getEpoch(99n)).resolves.toBeNull();
+    });
+  });
+
   describe("parseVotingRewardsError", () => {
     it("maps an on-chain contract code to its typed message", () => {
       const error = parseVotingRewardsError({
