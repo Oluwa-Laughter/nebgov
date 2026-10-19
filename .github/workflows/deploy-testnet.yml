@@ -1,10 +1,8 @@
 name: Deploy Testnet
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
-
+  # Personal fork: automatic checks are disabled; run manually if needed.
+  workflow_dispatch: {}
 env:
   CARGO_TERM_COLOR: always
 

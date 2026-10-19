@@ -1,15 +1,8 @@
 name: Indexer
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "packages/indexer/**"
-  pull_request:
-    branches: [main]
-    paths:
-      - "packages/indexer/**"
-
+  # Personal fork: automatic checks are disabled; run manually if needed.
+  workflow_dispatch: {}
 jobs:
   indexer:
     name: Indexer Build & Test

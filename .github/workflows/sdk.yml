@@ -1,17 +1,8 @@
 name: SDK
 
 on:
-  push:
-    paths:
-      - 'sdk/**'
-      - 'contracts/**'
-      - 'tools/simulation/**'
-  pull_request:
-    paths:
-      - 'sdk/**'
-      - 'contracts/**'
-      - 'tools/simulation/**'
-
+  # Personal fork: automatic checks are disabled; run manually if needed.
+  workflow_dispatch: {}
 jobs:
   changes:
     name: Detect changed paths

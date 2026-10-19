@@ -1,19 +1,8 @@
 name: Governance Simulation
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "contracts/**"
-      - "tools/sim/**"
-      - ".github/workflows/simulation.yml"
-  pull_request:
-    branches: [main]
-    paths:
-      - "contracts/**"
-      - "tools/sim/**"
-      - ".github/workflows/simulation.yml"
-
+  # Personal fork: automatic checks are disabled; run manually if needed.
+  workflow_dispatch: {}
 env:
   CARGO_TERM_COLOR: always
 

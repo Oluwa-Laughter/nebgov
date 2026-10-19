@@ -1,10 +1,8 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
-
+  # Personal fork: automatic checks are disabled; run manually if needed.
+  workflow_dispatch: {}
 jobs:
   test-and-build:
     name: Test and Build

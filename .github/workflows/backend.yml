@@ -1,11 +1,8 @@
 name: Backend
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
+  # Personal fork: automatic checks are disabled; run manually if needed.
+  workflow_dispatch: {}
 jobs:
   backend:
     name: Backend Build & Test

@@ -1,17 +1,8 @@
 name: CLI
 
 on:
-  push:
-    paths:
-      - 'packages/cli/**'
-      - 'sdk/**'
-      - '.github/workflows/cli.yml'
-  pull_request:
-    paths:
-      - 'packages/cli/**'
-      - 'sdk/**'
-      - '.github/workflows/cli.yml'
-
+  # Personal fork: automatic checks are disabled; run manually if needed.
+  workflow_dispatch: {}
 jobs:
   test:
     name: CLI Type check, Test & Build
